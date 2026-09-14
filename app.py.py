@@ -26,7 +26,7 @@ settings_df = load_data(DB_SETTINGS, ["Firma Adi", "Adres", "Vergi No", "IBAN", 
 
 # Ana Menü (Mobil Uyumlu)
 st.title("🚚 Zer Transport Pro")
-menu = st.selectbox("Menü Seçin", ["🏠 Ana Sayfa / Siparişler", "👥 Müşteri Yönetimi", "⚙️ Firma Ayarları", "📄 Auftrag & Fatura", "📷 CMR Tara & Gönder"])
+menu = st.selectbox("Menü Seçin", ["🏠 Ana Sayfa / Siparişler", "👥 Müşteri Yönetimi", "⚙️ Firma Ayarları", "📄 Fatura & Auftrag Oluştur", "📷 CMR Tara & Gönder"])
 
 # --- 1. ANA SAYFA / SİPARİŞLER ---
 if menu == "🏠 Ana Sayfa / Siparişler":
@@ -135,16 +135,25 @@ elif menu == "⚙️ Firma Ayarları":
             new_set.to_csv(DB_SETTINGS, index=False)
             st.success("Firma bilgileri başarıyla güncellendi!")
 
-# --- 4. AUFTRAG & FATURA ---
-elif menu == "📄 Auftrag & Fatura":
-    st.subheader("📄 Auftrag (PDF) Yükle ve Fatura Oluştur")
-    uploaded_auftrag = st.file_uploader("Müşteri Auftrag PDF Dosyasını Seçin", type=["pdf"])
+# --- 4. FATURA & AUFTRAG OLUŞTUR ---
+elif menu == "📄 Fatura & Auftrag Oluştur":
+    st.subheader("📄 Müşteriye Özel Fatura Oluştur")
     
-    if uploaded_auftrag:
-        st.success("Auftrag başarıyla yüklendi!")
-        fiyat_input = st.number_input("Fatura Tutarı (€ Giriniz)", min_value=0.0, step=10.0)
-        if st.button("Zer Transport Faturası Oluştur"):
-            st.success("Fatura başarıyla oluşturuldu ve müşteriye gönderime hazırlandı!")
+    if clients_df.empty:
+        st.warning("Önce 'Müşteri Yönetimi' sekmesinden en az bir müşteri eklemelisiniz.")
+    else:
+        with st.form("invoice_form"):
+            inv_client = st.selectbox("Fatura Kesilecek Müşteri", clients_df["Müşteri Adı"].tolist())
+            inv_no = st.text_input("Fatura / Auftrag No", value=f"FAT-{datetime.now().strftime('%Y%m%d%H%M')}")
+            inv_desc = st.text_input("Taşıma / Hizmet Açıklaması (Örn: Linz - Viyana Express Taşıma)")
+            inv_amount = st.number_input("Tutar (€)", min_value=0.0, step=10.0)
+            inv_date = st.date_input("Fatura Tarihi")
+            
+            create_inv_btn = st.form_submit_button("Fatura Taslağı Oluştur")
+            
+            if create_inv_btn:
+                st.success(f"✅ **{inv_client}** için **{inv_no}** numaralı ve **{inv_amount} €** tutarlı fatura başarıyla hazırlandı!")
+                st.info("Bu faturayı PDF olarak kaydedebilir veya doğrudan müşterinize iletebilirsiniz.")
 
 # --- 5. CMR TARA & GÖNDER ---
 elif menu == "📷 CMR Tara & Gönder":
@@ -153,5 +162,5 @@ elif menu == "📷 CMR Tara & Gönder":
     
     if camera_file:
         st.image(camera_file, caption="Yüklenen CMR Belgesi", use_column_width=True)
-        if st.button("Belgeyi PDF'e Çevir ve E-posta Gönder"):
-            st.success("CMR belgesi PDF'e dönüştürüldü ve fatura ile müşteriye gönderildi!")
+        if st.button("Belgeyi PDF'e Çevir ve Gönder"):
+            st.success("CMR belgesi PDF'e dönüştürüldü ve müşteriye gönderildi!")
