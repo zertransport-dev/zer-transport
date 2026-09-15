@@ -22,7 +22,6 @@ def load_data(file, columns):
 clients_df = load_data(DB_CLIENTS, ["Müşteri Adı", "Yetkili", "E-posta", "Telefon", "Adres"])
 orders_df = load_data(DB_ORDERS, ["Fatura No", "Müşteri", "Açıklama", "Netto", "MwSt (%)", "Brutto", "Tarih", "Vade Tarihi", "Durum"])
 
-# Eski veri yapısından gelenler varsa otomatik güncelleme (Migration)
 if "Tutar" in orders_df.columns and "Brutto" not in orders_df.columns:
     orders_df["Netto"] = orders_df["Tutar"]
     orders_df["MwSt (%)"] = 20.0
@@ -133,87 +132,12 @@ elif menu == "📄 Fatura & Auftrag Oluştur":
         doc = st.session_state["last_doc"]
         st.markdown("---")
         
-        modern_invoice_html = f"""
-        <div style="max-width: 800px; margin: auto; padding: 40px; border: 1px solid #dcdcdc; box-shadow: 0 4px 20px rgba(0,0,0,0.06); font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #ffffff; color: #2c3e50; border-radius: 8px;">
-            <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #1abc9c; padding-bottom: 25px; margin-bottom: 25px;">
-                <div style="line-height: 1.5;">
-                    <h2 style="color: #2c3e50; margin: 0 0 5px 0; font-size: 26px;">🚚 {doc['comp_name']}</h2>
-                    <p style="margin: 2px 0; font-size: 13px; color: #555;">Anschrift: {doc['comp_addr']}</p>
-                    <p style="margin: 2px 0; font-size: 13px; color: #555;">Tel: {doc['comp_tel']} | E-Mail: {doc['comp_mail']}</p>
-                    <p style="margin: 2px 0; font-size: 13px; color: #555;">UID-Nr / Steuernummer: {doc['comp_tax']}</p>
-                </div>
-                <div style="text-align: right; line-height: 1.5;">
-                    <h1 style="color: #1abc9c; margin: 0; font-size: 24px; text-transform: uppercase; letter-spacing: 1px;">{doc['type']}</h1>
-                    <p style="margin: 2px 0; font-size: 13px; color: #555;"><b>Dokumenten-Nr:</b> {doc['no']}</p>
-                    <p style="margin: 2px 0; font-size: 13px; color: #555;"><b>Datum:</b> {doc['tarih']}</p>
-                    <p style="margin: 2px 0; font-size: 13px; color: #555;"><b>Fälligkeitsdatum:</b> {doc['vade']}</p>
-                </div>
-            </div>
-
-            <div style="display: flex; justify-content: space-between; margin-bottom: 30px;">
-                <div style="width: 48%; background: #fdfdfd; padding: 15px; border-radius: 6px; border: 1px solid #eaeaea; border-left: 4px solid #1abc9c;">
-                    <p style="margin: 0 0 5px 0; font-size: 13px; color: #888; text-transform: uppercase;"><b>Rechnungsempfänger (Kunde):</b></p>
-                    <p style="margin: 0 0 4px 0; font-size: 15px; font-weight: bold; color: #111;">{doc['client']}</p>
-                    <p style="margin: 2px 0; font-size: 13px; color: #555;">Ansprechpartner: {doc['yetkili']}</p>
-                    <p style="margin: 2px 0; font-size: 13px; color: #555;">Adresse: {doc['adres']}</p>
-                </div>
-                <div style="width: 48%; background: #fdfdfd; padding: 15px; border-radius: 6px; border: 1px solid #eaeaea; border-left: 4px solid #34495e;">
-                    <p style="margin: 0 0 5px 0; font-size: 13px; color: #888; text-transform: uppercase;"><b>Zahlungsbedingungen:</b></p>
-                    <p style="margin: 2px 0; font-size: 13px; color: #555;"><b>Zahlungsziel:</b> Innerhalb von {doc['vade_gun']} Tagen</p>
-                    <p style="margin: 2px 0; font-size: 13px; color: #555;"><b>Status:</b> Offen</p>
-                </div>
-            </div>
-
-            <table style="width: 100%; border-collapse: collapse; margin-bottom: 30px;">
-                <thead>
-                    <tr style="background-color: #2c3e50; color: white;">
-                        <th style="text-align: left; padding: 12px; font-size: 13px;">Leistungsbeschreibung</th>
-                        <th style="text-align: right; padding: 12px; font-size: 13px;">Netto Betrag</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td style="padding: 14px 12px; border-bottom: 1px solid #eaeaea; font-size: 13px; color: #333;">{doc['desc']}</td>
-                        <td style="padding: 14px 12px; border-bottom: 1px solid #eaeaea; text-align: right; font-size: 13px; color: #333;"><b>{doc['net']:.2f} €</b></td>
-                    </tr>
-                </tbody>
-            </table>
-
-            <div style="display: flex; justify-content: flex-end; margin-bottom: 40px;">
-                <div style="width: 280px; font-size: 13px; line-height: 1.6;">
-                    <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #eaeaea; padding: 6px 0;">
-                        <span>Nettobetrag:</span>
-                        <span><b>{doc['net']:.2f} €</b></span>
-                    </div>
-                    <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #eaeaea; padding: 6px 0;">
-                        <span>MwSt. ({doc['mwst_rate']}%):</span>
-                        <span><b>{doc['mwst_val']:.2f} €</b></span>
-                    </div>
-                    <div style="display: flex; justify-content: space-between; border-bottom: 2px solid #2c3e50; padding: 8px 0; font-size: 16px; color: #1abc9c;">
-                        <span><b>Gesamtbetrag:</b></span>
-                        <span><b>{doc['gross']:.2f} €</b></span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Banka Bilgileri En Altta -->
-            <div style="margin-top: 30px; padding: 15px; background-color: #f8f9fa; border-radius: 6px; border: 1px solid #e9ecef; font-size: 12px; color: #444;">
-                <p style="margin: 0 0 5px 0; font-weight: bold; text-transform: uppercase; color: #2c3e50;">Bankverbindung / Banka Bilgileri:</p>
-                <p style="margin: 2px 0;"><b>IBAN:</b> {doc['comp_iban']}</p>
-                <p style="margin: 2px 0;"><b>Unternehmen:</b> {doc['comp_name']} | <b>Steuer-Nr:</b> {doc['comp_tax']}</p>
-            </div>
-
-            <div style="margin-top: 30px; padding-top: 15px; border-top: 1px solid #eaeaea; font-size: 11px; color: #777; text-align: center;">
-                <p style="margin: 2px 0;">Bitte überweisen Sie den Gesamtbetrag unter Angabe der Dokumenten-Nr auf das genannte Konto.</p>
-                <p style="margin: 2px 0;">{doc['comp_name']} — Professional Transport & Express Logistics</p>
-            </div>
-        </div>
-        """
+        modern_invoice_html = f"""<div style="max-width: 800px; margin: auto; padding: 40px; border: 1px solid #dcdcdc; box-shadow: 0 4px 20px rgba(0,0,0,0.06); font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #ffffff; color: #2c3e50; border-radius: 8px;"><div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #1abc9c; padding-bottom: 25px; margin-bottom: 25px;"><div style="line-height: 1.5;"><h2 style="color: #2c3e50; margin: 0 0 5px 0; font-size: 26px;">🚚 {doc['comp_name']}</h2><p style="margin: 2px 0; font-size: 13px; color: #555;">Anschrift: {doc['comp_addr']}</p><p style="margin: 2px 0; font-size: 13px; color: #555;">Tel: {doc['comp_tel']} | E-Mail: {doc['comp_mail']}</p><p style="margin: 2px 0; font-size: 13px; color: #555;">UID-Nr / Steuernummer: {doc['comp_tax']}</p></div><div style="text-align: right; line-height: 1.5;"><h1 style="color: #1abc9c; margin: 0; font-size: 24px; text-transform: uppercase; letter-spacing: 1px;">{doc['type']}</h1><p style="margin: 2px 0; font-size: 13px; color: #555;"><b>Dokumenten-Nr:</b> {doc['no']}</p><p style="margin: 2px 0; font-size: 13px; color: #555;"><b>Datum:</b> {doc['tarih']}</p><p style="margin: 2px 0; font-size: 13px; color: #555;"><b>Fälligkeitsdatum:</b> {doc['vade']}</p></div></div><div style="display: flex; justify-content: space-between; margin-bottom: 30px;"><div style="width: 48%; background: #fdfdfd; padding: 15px; border-radius: 6px; border: 1px solid #eaeaea; border-left: 4px solid #1abc9c;"><p style="margin: 0 0 5px 0; font-size: 13px; color: #888; text-transform: uppercase;"><b>Rechnungsempfänger (Kunde):</b></p><p style="margin: 0 0 4px 0; font-size: 15px; font-weight: bold; color: #111;">{doc['client']}</p><p style="margin: 2px 0; font-size: 13px; color: #555;">Ansprechpartner: {doc['yetkili']}</p><p style="margin: 2px 0; font-size: 13px; color: #555;">Adresse: {doc['adres']}</p></div><div style="width: 48%; background: #fdfdfd; padding: 15px; border-radius: 6px; border: 1px solid #eaeaea; border-left: 4px solid #34495e;"><p style="margin: 0 0 5px 0; font-size: 13px; color: #888; text-transform: uppercase;"><b>Zahlungsbedingungen:</b></p><p style="margin: 2px 0; font-size: 13px; color: #555;"><b>Zahlungsziel:</b> Innerhalb von {doc['vade_gun']} Tagen</p><p style="margin: 2px 0; font-size: 13px; color: #555;"><b>Status:</b> Offen</p></div></div><table style="width: 100%; border-collapse: collapse; margin-bottom: 30px;"><thead><tr style="background-color: #2c3e50; color: white;"><th style="text-align: left; padding: 12px; font-size: 13px;">Leistungsbeschreibung</th><th style="text-align: right; padding: 12px; font-size: 13px;">Netto Betrag</th></tr></thead><tbody><tr><td style="padding: 14px 12px; border-bottom: 1px solid #eaeaea; font-size: 13px; color: #333;">{doc['desc']}</td><td style="padding: 14px 12px; border-bottom: 1px solid #eaeaea; text-align: right; font-size: 13px; color: #333;"><b>{doc['net']:.2f} €</b></td></tr></tbody></table><div style="display: flex; justify-content: flex-end; margin-bottom: 40px;"><div style="width: 280px; font-size: 13px; line-height: 1.6;"><div style="display: flex; justify-content: space-between; border-bottom: 1px solid #eaeaea; padding: 6px 0;"><span>Nettobetrag:</span><span><b>{doc['net']:.2f} €</b></span></div><div style="display: flex; justify-content: space-between; border-bottom: 1px solid #eaeaea; padding: 6px 0;"><span>MwSt. ({doc['mwst_rate']}%):</span><span><b>{doc['mwst_val']:.2f} €</b></span></div><div style="display: flex; justify-content: space-between; border-bottom: 2px solid #2c3e50; padding: 8px 0; font-size: 16px; color: #1abc9c;"><span><b>Gesamtbetrag:</b></span><span><b>{doc['gross']:.2f} €</b></span></div></div></div><div style="margin-top: 30px; padding: 15px; background-color: #f8f9fa; border-radius: 6px; border: 1px solid #e9ecef; font-size: 12px; color: #444;"><p style="margin: 0 0 5px 0; font-weight: bold; text-transform: uppercase; color: #2c3e50;">Bankverbindung / Banka Bilgileri:</p><p style="margin: 2px 0;"><b>IBAN:</b> {doc['comp_iban']}</p><p style="margin: 2px 0;"><b>Unternehmen:</b> {doc['comp_name']} | <b>Steuer-Nr:</b> {doc['comp_tax']}</p></div><div style="margin-top: 30px; padding-top: 15px; border-top: 1px solid #eaeaea; font-size: 11px; color: #777; text-align: center;"><p style="margin: 2px 0;">Bitte überweisen Sie den Gesamtbetrag unter Angabe der Dokumenten-Nr auf das genannte Konto.</p><p style="margin: 2px 0;">{doc['comp_name']} — Professional Transport & Express Logistics</p></div></div>"""
         
         st.markdown(modern_invoice_html, unsafe_allow_html=True)
         st.markdown("<br>", unsafe_allow_html=True)
         
-        st.info("💡 **PDF olarak kaydetmek için:** Klavyenizden **Ctrl + P** tuşlarına basın ve açılan pencerede hedef olarak **'PDF olarak kaydet' (Save as PDF)** seçeneğini seçin.")
+        st.info("💡 **PDF olarak kaydetmek için:** Klavyenizden **Ctrl + P** tuşlarına basın ve hedef olarak **'PDF olarak kaydet' (Save as PDF)** seçeneğini seçin.")
         
         wa_text = f"Sehr geehrte(r) {doc['yetkili']}, Ihr Dokument {doc['no']} über {doc['gross']:.2f} EUR ist bereit. Vielen Dank - {doc['comp_name']}."
         st.markdown(f"📱 **Per WhatsApp senden:** [Hier klicken](https://wa.me/{doc['telefon'].replace(' ', '')}?text={urllib.parse.quote(wa_text)})", unsafe_allow_html=True)
