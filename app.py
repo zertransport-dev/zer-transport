@@ -3,7 +3,6 @@ import pandas as pd
 import os
 import urllib.parse
 from datetime import datetime, timedelta
-from io import BytesIO
 
 # Sayfa Yapılandırması (Mobil Uyumlu)
 st.set_page_config(page_title="Zer Transport Pro", page_icon="🚚", layout="centered")
@@ -43,7 +42,6 @@ if menu == "🏠 Ana Sayfa / Özet Pano":
     
     if not orders_df.empty:
         total_ciro = orders_df["Tutar"].sum()
-        paid_df = orders_df[orders_df["Durum"] == "Ödendi"]
         pending_df = orders_df[orders_df["Durum"] == "Bekliyor"]
         
         col1, col2 = st.columns(2)
@@ -97,7 +95,7 @@ elif menu == "📄 Fatura & Auftrag Oluştur":
             inv_amount = st.number_input("Tutar (€)", min_value=0.0, step=10.0)
             vade_gun = st.slider("Ödeme Vadesi (Gün)", 0, 30, 14)
             
-            create_btn = st.form_submit_button("PDF Belgesi Oluştur")
+            create_btn = st.form_submit_button("Belgeyi Oluştur ve Göster")
             
             if create_btn:
                 comp = settings_df.iloc[0] if not settings_df.empty else {"Firma Adi": "Zer Transport", "Adres": "Attnang-Puchheim", "Vergi No": "", "IBAN": "", "E-posta": "", "Telefon": ""}
@@ -111,61 +109,41 @@ elif menu == "📄 Fatura & Auftrag Oluştur":
                 orders_df = pd.concat([orders_df, new_order], ignore_index=True)
                 orders_df.to_csv(DB_ORDERS, index=False)
                 
-               # Fatura / Auftrag Önizleme ve Yazdırma Ekranı
-st.markdown("---")
-st.subheader("📄 Belge Önizlemesi")
+                st.session_state["last_doc"] = {
+                    "type": doc_type,
+                    "no": inv_no,
+                    "client": inv_client,
+                    "desc": inv_desc,
+                    "amount": inv_amount,
+                    "tarih": tarih_str,
+                    "vade": vade_str,
+                    "client_row": client_row
+                }
+                st.success("✅ Belge başarıyla kaydedildi!")
 
-# Belge içeriğini HTML olarak hazırlıyoruz
-html_content = f"""
-<div style="border: 2px solid #ccc; padding: 20px; border-radius: 10px; font-family: Arial;">
-    <h3>{title_text if 'title_text' in locals() else 'RECHNUNG / AUFTRAG'}</h3>
-    <hr>
-    <p><b>Belge No:</b> {inv_no}</p>
-    <p><b>Tarih:</b> {tarih_str} | <b>Vade:</b> {vade_str}</p>
-    <p><b>Müşteri:</b> {inv_client}</p>
-    <p><b>Açıklama:</b> {inv_desc}</p>
-    <hr>
-    <h4 style="text-align: right;">Toplam Tutar: {inv_amount} €</h4>
-</div>
-"""
-
-st.markdown(html_content, unsafe_allow_html=True)
-st.info("💡 Bu belgeyi PDF olarak kaydetmek için klavyenizden **Ctrl + P** tuşlarına basıp hedef olarak 'PDF olarak kaydet' seçeneğini seçebilirsiniz.")
-                
-                data = [
-                    ["Açıklama / Leistung", "Tutar / Betrag"],
-                    [inv_desc, f"{inv_amount:.2f} €"],
-                    ["Toplam / Gesamt", f"{inv_amount:.2f} €"]
-                ]
-                t = Table(data, colWidths=[380, 120])
-                t.setStyle(TableStyle([
-                    ('BACKGROUND', (0,0), (-1,0), colors.HexColor("#2C3E50")),
-                    ('TEXTCOLOR', (0,0), (-1,0), colors.whitesmoke),
-                    ('ALIGN', (0,0), (-1,-1), 'LEFT'),
-                    ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
-                    ('BOTTOMPADDING', (0,0), (-1,0), 8),
-                    ('BACKGROUND', (0,1), (-1,-1), colors.HexColor("#F8F9F9")),
-                    ('GRID', (0,0), (-1,-1), 0.5, colors.grey)
-                ]))
-                elements.append(t)
-                elements.append(Spacer(1, 30))
-                
-                elements.append(Paragraph(f"Ödemeyi lütfen yukarıdaki IBAN numarasına {vade_gun} gün içinde gerçekleştiriniz. İyi çalışmalar dileriz!", styles['Normal']))
-                
-                doc.build(elements)
-                pdf_data = buffer.getvalue()
-                
-                st.success(f"✅ Belge başarıyla oluşturuldu!")
-                
-                st.download_button(
-                    label="📥 PDF Olarak İndir",
-                    data=pdf_data,
-                    file_name=f"{inv_no}.pdf",
-                    mime="application/pdf"
-                )
-                
-                wa_text = f"Merhaba {client_row['Yetkili']}, {inv_no} nolu ve {inv_amount} EUR tutarındaki taşıma belgeniz hazırdır. İyi çalışmalar dileriz - Zer Transport."
-                st.markdown(f"📱 **WhatsApp ile Gönder:** [Tıklayın](https://wa.me/{client_row['Telefon'].replace(' ', '')}?text={urllib.parse.quote(wa_text)})", unsafe_allow_html=True)
+    if "last_doc" in st.session_state:
+        doc = st.session_state["last_doc"]
+        st.markdown("---")
+        st.subheader("📄 Belge Önizlemesi")
+        
+        html_content = f"""
+        <div style="border: 2px solid #2C3E50; padding: 25px; border-radius: 10px; font-family: Arial; background-color: #ffffff; color: #000000;">
+            <h2 style="color: #2C3E50; margin-top: 0;">{doc['type']}</h2>
+            <hr style="border: 1px solid #2C3E50;">
+            <p><b>Belge No:</b> {doc['no']}</p>
+            <p><b>Tarih:</b> {doc['tarih']} | <b>Vade Tarihi:</b> {doc['vade']}</p>
+            <p><b>Müşteri:</b> {doc['client']}</p>
+            <hr>
+            <p><b>Açıklama / Leistung:</b><br>{doc['desc']}</p>
+            <hr>
+            <h3 style="text-align: right; color: #2C3E50;">Toplam Tutar: {doc['amount']:.2f} €</h3>
+        </div>
+        """
+        st.markdown(html_content, unsafe_allow_html=True)
+        st.info("💡 Bu belgeyi PDF olarak kaydetmek veya yazdırmak için klavyenizden **Ctrl + P** tuşlarına basabilirsiniz.")
+        
+        wa_text = f"Merhaba {doc['client_row']['Yetkili']}, {doc['no']} nolu ve {doc['amount']} EUR tutarındaki taşıma belgeniz hazırdır. İyi çalışmalar dileriz - Zer Transport."
+        st.markdown(f"📱 **WhatsApp ile Gönder:** [Tıklayın](https://wa.me/{doc['client_row']['Telefon'].replace(' ', '')}?text={urllib.parse.quote(wa_text)})", unsafe_allow_html=True)
 
 # --- 3. MÜŞTERİ YÖNETİMİ ---
 elif menu == "👥 Müşteri Yönetimi":
