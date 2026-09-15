@@ -111,29 +111,26 @@ elif menu == "📄 Fatura & Auftrag Oluştur":
                 orders_df = pd.concat([orders_df, new_order], ignore_index=True)
                 orders_df.to_csv(DB_ORDERS, index=False)
                 
-                buffer = BytesIO()
-                doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=40, leftMargin=40, topMargin=40, bottomMargin=40)
-                elements = []
-                styles = getSampleStyleSheet()
-                
-                if os.path.exists(LOGO_PATH):
-                    from reportlab.platypus import Image
-                    elements.append(Image(LOGO_PATH, width=120, height=50))
-                    elements.append(Spacer(1, 10))
-                
-                title_text = "RECHNUNG / FATURA" if "Fatura" in doc_type else "AUFTRAG / SEFER ONAYI"
-                elements.append(Paragraph(f"<b>{comp.get('Firma Adi', 'Zer Transport')}</b>", styles['Heading1']))
-                elements.append(Paragraph(f"{comp.get('Adres', '')} | Tel: {comp.get('Telefon', '')} | E-mail: {comp.get('E-posta', '')}", styles['Normal']))
-                elements.append(Paragraph(f"Steuer-Nr / Vergi No: {comp.get('Vergi No', '')} | IBAN: {comp.get('IBAN', '')}", styles['Normal']))
-                elements.append(Spacer(1, 20))
-                
-                elements.append(Paragraph(f"<b>{title_text}</b>", styles['Heading2']))
-                elements.append(Paragraph(f"<b>Belge No:</b> {inv_no} | <b>Tarih:</b> {tarih_str} | <b>Vade:</b> {vade_str}", styles['Normal']))
-                elements.append(Spacer(1, 15))
-                
-                elements.append(Paragraph(f"<b>Müşteri / Auftraggeber:</b>", styles['Heading3']))
-                elements.append(Paragraph(f"<b>{client_row['Müşteri Adı']}</b><br/>Yetkili: {client_row['Yetkili']}<br/>Adres: {client_row['Adres']}<br/>E-posta: {client_row['E-posta']}", styles['Normal']))
-                elements.append(Spacer(1, 20))
+               # Fatura / Auftrag Önizleme ve Yazdırma Ekranı
+st.markdown("---")
+st.subheader("📄 Belge Önizlemesi")
+
+# Belge içeriğini HTML olarak hazırlıyoruz
+html_content = f"""
+<div style="border: 2px solid #ccc; padding: 20px; border-radius: 10px; font-family: Arial;">
+    <h3>{title_text if 'title_text' in locals() else 'RECHNUNG / AUFTRAG'}</h3>
+    <hr>
+    <p><b>Belge No:</b> {inv_no}</p>
+    <p><b>Tarih:</b> {tarih_str} | <b>Vade:</b> {vade_str}</p>
+    <p><b>Müşteri:</b> {inv_client}</p>
+    <p><b>Açıklama:</b> {inv_desc}</p>
+    <hr>
+    <h4 style="text-align: right;">Toplam Tutar: {inv_amount} €</h4>
+</div>
+"""
+
+st.markdown(html_content, unsafe_allow_html=True)
+st.info("💡 Bu belgeyi PDF olarak kaydetmek için klavyenizden **Ctrl + P** tuşlarına basıp hedef olarak 'PDF olarak kaydet' seçeneğini seçebilirsiniz.")
                 
                 data = [
                     ["Açıklama / Leistung", "Tutar / Betrag"],
