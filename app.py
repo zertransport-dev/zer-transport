@@ -21,6 +21,17 @@ def load_data(file, columns):
 
 clients_df = load_data(DB_CLIENTS, ["Müşteri Adı", "Yetkili", "E-posta", "Telefon", "Adres"])
 orders_df = load_data(DB_ORDERS, ["Fatura No", "Müşteri", "Açıklama", "Netto", "MwSt (%)", "Brutto", "Tarih", "Vade Tarihi", "Durum"])
+
+# Eski veri yapısından gelenler varsa otomatik güncelleme (Migration)
+if "Tutar" in orders_df.columns and "Brutto" not in orders_df.columns:
+    orders_df["Netto"] = orders_df["Tutar"]
+    orders_df["MwSt (%)"] = 20.0
+    orders_df["Brutto"] = orders_df["Tutar"] * 1.2
+    orders_df = orders_df.drop(columns=["Tutar"])
+    if "Dil" in orders_df.columns:
+        orders_df = orders_df.drop(columns=["Dil"])
+    orders_df.to_csv(DB_ORDERS, index=False)
+
 settings_df = load_data(DB_SETTINGS, ["Firma Adi", "Adres", "Vergi No", "IBAN", "E-posta", "Telefon"])
 
 st.title("🚚 Zer Transport Pro")
@@ -40,7 +51,7 @@ if menu == "🏠 Ana Sayfa / Özet Pano":
         
         col1, col2 = st.columns(2)
         col1.metric("Gesamtumsatz (Toplam Brüt Ciro)", f"{total_ciro:.2f} €")
-        col2.metric("Offene Forderungen (Bekleyen)", f"{pending_df['Brutto'].sum():.2f} €")
+        col2.metric("Offene Forderungen (Bekleyen)", f"{pending_df['Brutto'].sum():.2f} €" if not pending_df.empty else "0.00 €")
         
         st.markdown("---")
         st.subheader("📋 Rechnungen & Aufträge")
@@ -85,8 +96,8 @@ elif menu == "📄 Fatura & Auftrag Oluştur":
             inv_no = st.text_input("Dokumenten-Nr / Belge No", value=f"ZT-{datetime.now().strftime('%Y%m%d%H%M')}")
             inv_desc = st.text_area("Leistungsbeschreibung / Rota ve Hizmet Açıklaması (Örn: Express Transport Linz - Wien)")
             net_amount = st.number_input("Nettobetrag (€) / Netto Tutar", min_value=0.0, step=10.0)
-            mwst_rate = st.selectbox("MwSt. (%) / KDV Oranı", [0.0, 10.0, 13.0, 20.0], index=3) # Standart Avusturya KDV %20
-            vade_gun = st.slider(" Zahlungsziel (Tage) / Vade Süresi (Gün)", 0, 30, 14)
+            mwst_rate = st.selectbox("MwSt. (%) / KDV Oranı", [0.0, 10.0, 13.0, 20.0], index=3)
+            vade_gun = st.slider("Zahlungsziel (Tage) / Vade Süresi (Gün)", 0, 30, 14)
             
             create_btn = st.form_submit_button("Dokument Generieren (Belgeyi Oluştur)")
             
@@ -122,7 +133,6 @@ elif menu == "📄 Fatura & Auftrag Oluştur":
         doc = st.session_state["last_doc"]
         st.markdown("---")
         
-        # Tamamen Almanca, Netto-Brutto dökümlü, en altta banka bilgileri olan şık PDF tasarımı
         modern_invoice_html = f"""
         <div style="max-width: 800px; margin: auto; padding: 40px; border: 1px solid #dcdcdc; box-shadow: 0 4px 20px rgba(0,0,0,0.06); font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #ffffff; color: #2c3e50; border-radius: 8px;">
             <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #1abc9c; padding-bottom: 25px; margin-bottom: 25px;">
