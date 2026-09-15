@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import os
+import urllib.parse
 from datetime import datetime, timedelta
 from io import BytesIO
 from reportlab.lib.pagesizes import A4
@@ -56,7 +57,6 @@ if menu == "🏠 Ana Sayfa / Özet Pano":
         st.markdown("---")
         st.subheader("📋 Tüm Faturalar ve Durumları")
         
-        # Durum Güncelleme ve Takip
         for index, row in orders_df.iterrows():
             with st.expander(f"{row['Fatura No']} - {row['Müşteri']} ({row['Tutar']} €) [{row['Durum']}]"):
                 st.write(f"**Açıklama:** {row['Açıklama']}")
@@ -104,32 +104,27 @@ elif menu == "📄 Fatura & Auftrag Oluştur":
             create_btn = st.form_submit_button("PDF Belgesi Oluştur")
             
             if create_btn:
-                # Firma bilgileri al
                 comp = settings_df.iloc[0] if not settings_df.empty else {"Firma Adi": "Zer Transport", "Adres": "Attnang-Puchheim", "Vergi No": "", "IBAN": "", "E-posta": "", "Telefon": ""}
                 client_row = clients_df[clients_df["Müşteri Adı"] == inv_client].iloc[0]
                 
                 tarih_str = datetime.now().strftime('%Y-%m-%d')
                 vade_str = (datetime.now() + timedelta(days=vade_gun)).strftime('%Y-%m-%d')
                 
-                # Listeye kaydet
                 new_order = pd.DataFrame([[inv_no, inv_client, inv_desc, inv_amount, tarih_str, vade_str, "Bekliyor", lang]], 
                                        columns=["Fatura No", "Müşteri", "Açıklama", "Tutar", "Tarih", "Vade Tarihi", "Durum", "Dil"])
                 orders_df = pd.concat([orders_df, new_order], ignore_index=True)
                 orders_df.to_csv(DB_ORDERS, index=False)
                 
-                # PDF Oluşturma (ReportLab)
                 buffer = BytesIO()
                 doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=40, leftMargin=40, topMargin=40, bottomMargin=40)
                 elements = []
                 styles = getSampleStyleSheet()
                 
-                # Logo ekleme kontrolü
                 if os.path.exists(LOGO_PATH):
                     from reportlab.platypus import Image
                     elements.append(Image(LOGO_PATH, width=120, height=50))
                     elements.append(Spacer(1, 10))
                 
-                # Başlık ve Firma Bilgileri
                 title_text = "RECHNUNG / FATURA" if "Fatura" in doc_type else "AUFTRAG / SEFER ONAYI"
                 elements.append(Paragraph(f"<b>{comp.get('Firma Adi', 'Zer Transport')}</b>", styles['Heading1']))
                 elements.append(Paragraph(f"{comp.get('Adres', '')} | Tel: {comp.get('Telefon', '')} | E-mail: {comp.get('E-posta', '')}", styles['Normal']))
@@ -140,12 +135,10 @@ elif menu == "📄 Fatura & Auftrag Oluştur":
                 elements.append(Paragraph(f"<b>Belge No:</b> {inv_no} | <b>Tarih:</b> {tarih_str} | <b>Vade:</b> {vade_str}", styles['Normal']))
                 elements.append(Spacer(1, 15))
                 
-                # Müşteri Bilgileri
                 elements.append(Paragraph(f"<b>Müşteri / Auftraggeber:</b>", styles['Heading3']))
                 elements.append(Paragraph(f"<b>{client_row['Müşteri Adı']}</b><br/>Yetkili: {client_row['Yetkili']}<br/>Adres: {client_row['Adres']}<br/>E-posta: {client_row['E-posta']}", styles['Normal']))
                 elements.append(Spacer(1, 20))
                 
-                # Tablo Verileri
                 data = [
                     ["Açıklama / Leistung", "Tutar / Betrag"],
                     [inv_desc, f"{inv_amount:.2f} €"],
@@ -171,7 +164,6 @@ elif menu == "📄 Fatura & Auftrag Oluştur":
                 
                 st.success(f"✅ Belge başarıyla oluşturuldu!")
                 
-                # İndirme Butonu
                 st.download_button(
                     label="📥 PDF Olarak İndir",
                     data=pdf_data,
@@ -179,7 +171,6 @@ elif menu == "📄 Fatura & Auftrag Oluştur":
                     mime="application/pdf"
                 )
                 
-                # WhatsApp Paylaşım Kısayolu
                 wa_text = f"Merhaba {client_row['Yetkili']}, {inv_no} nolu ve {inv_amount} EUR tutarındaki taşıma belgeniz hazırdır. İyi çalışmalar dileriz - Zer Transport."
                 st.markdown(f"📱 **WhatsApp ile Gönder:** [Tıklayın](https://wa.me/{client_row['Telefon'].replace(' ', '')}?text={urllib.parse.quote(wa_text)})", unsafe_allow_html=True)
 
