@@ -1,12 +1,4 @@
-import sys
-import subprocess
-
-try:
-    import reportlab
-except ImportError:
-    subprocess.run([sys.executable, "-m", "pip", "install", "reportlab"])
-    import reportlab
-    import streamlit as st
+ import streamlit as st
 import pandas as pd
 import os
 import urllib.parse
