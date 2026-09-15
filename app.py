@@ -4,10 +4,6 @@ import os
 import urllib.parse
 from datetime import datetime, timedelta
 from io import BytesIO
-from reportlab.lib.pagesizes import A4
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.lib import colors
 
 # Sayfa Yapılandırması (Mobil Uyumlu)
 st.set_page_config(page_title="Zer Transport Pro", page_icon="🚚", layout="centered")
